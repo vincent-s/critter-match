@@ -6,6 +6,8 @@ A cheerful 6×6 memory matching game built for a 7-year-old, with 18 critter pai
 
 Or open `index.html` directly in a browser — it's a single self-contained file.
 
+![Critter Match gameplay, Hard difficulty, showing the 6x6 board with a matched pair](screenshot.png)
+
 ## Features
 
 - Three difficulty levels: Easy (4×4, 8 pairs), Medium (6×4, 12 pairs), Hard (6×6, 18 pairs)
