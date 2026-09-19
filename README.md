@@ -2,7 +2,9 @@
 
 A cheerful 6×6 memory matching game built for a 7-year-old, with 18 critter pairs (🦄🐸🐙🦋🐳🦁🐼🦊🐨🐰🦉🐢🐬🦖🐝🐧🐌🦀) to find.
 
-Play by opening `index.html` in a browser, or enable GitHub Pages on this repo for a shareable link.
+**Play it live: https://vincent-s.github.io/critter-match/**
+
+Or open `index.html` directly in a browser — it's a single self-contained file.
 
 ## Features
 
