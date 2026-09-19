@@ -1,0 +1,836 @@
+<title>Critter Match</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Nunito:wght@600;700;800&display=swap');
+
+  :root {
+    --bg-a: #bfe8ff;
+    --bg-b: #f1d9ff;
+    --surface: #ffffff;
+    --surface-soft: #fff8ec;
+    --ink: #2b2250;
+    --ink-soft: #6a5c96;
+    --card-back-1: #ff8a65;
+    --card-back-2: #ffb74d;
+    --card-face: #ffffff;
+    --accent-yellow: #ffd166;
+    --accent-mint: #06d6a0;
+    --accent-pink: #ff6b9d;
+    --accent-blue: #4ea8de;
+    --shadow: rgba(43, 34, 80, 0.2);
+    --ring: #ffffff;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg-a: #1b1436;
+      --bg-b: #341f57;
+      --surface: #241a44;
+      --surface-soft: #2c2052;
+      --ink: #fdf3ff;
+      --ink-soft: #c9baec;
+      --card-back-1: #ff7a59;
+      --card-back-2: #ffa94d;
+      --card-face: #2c2052;
+      --shadow: rgba(0, 0, 0, 0.45);
+      --ring: #3a2c63;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg-a: #1b1436;
+    --bg-b: #341f57;
+    --surface: #241a44;
+    --surface-soft: #2c2052;
+    --ink: #fdf3ff;
+    --ink-soft: #c9baec;
+    --card-back-1: #ff7a59;
+    --card-back-2: #ffa94d;
+    --card-face: #2c2052;
+    --shadow: rgba(0, 0, 0, 0.45);
+    --ring: #3a2c63;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: radial-gradient(circle at 20% 0%, var(--bg-b), var(--bg-a) 65%);
+    color: var(--ink);
+    font-family: 'Nunito', system-ui, sans-serif;
+    min-height: 100%;
+  }
+
+  .page {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 20px 16px 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .topbar { text-align: center; }
+
+  h1 {
+    font-family: 'Baloo 2', 'Nunito', system-ui, sans-serif;
+    font-weight: 800;
+    font-size: clamp(1.7rem, 6vw, 2.4rem);
+    margin: 0;
+    color: var(--ink);
+    text-wrap: balance;
+  }
+
+  .subtitle {
+    margin: 4px 0 0;
+    font-weight: 700;
+    color: var(--ink-soft);
+    font-size: clamp(0.9rem, 3vw, 1.05rem);
+  }
+
+  .difficulty-row {
+    display: flex;
+    gap: 8px;
+    background: var(--surface);
+    padding: 6px;
+    border-radius: 999px;
+    box-shadow: 0 6px 18px var(--shadow);
+  }
+
+  .diff-btn {
+    font-family: 'Baloo 2', sans-serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+    border: none;
+    background: transparent;
+    color: var(--ink-soft);
+    border-radius: 999px;
+    padding: 8px 16px;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, transform 0.1s ease;
+  }
+  .diff-btn:hover { transform: translateY(-1px); }
+  .diff-btn:focus-visible { outline: 3px solid var(--accent-blue); outline-offset: 2px; }
+  .diff-btn.active {
+    background: var(--accent-mint);
+    color: #16412f;
+  }
+
+  .stats {
+    width: 100%;
+    max-width: 620px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface);
+    border-radius: 18px;
+    padding: 10px 14px;
+    box-shadow: 0 6px 18px var(--shadow);
+  }
+
+  .stat {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .stat-label {
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  .stat-value {
+    font-family: 'Baloo 2', sans-serif;
+    font-size: clamp(1.1rem, 4vw, 1.4rem);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+  }
+
+  .icon-btn {
+    border: none;
+    background: var(--surface-soft);
+    border-radius: 14px;
+    width: 44px;
+    height: 44px;
+    font-size: 1.3rem;
+    cursor: pointer;
+    flex: 0 0 auto;
+    transition: transform 0.15s ease;
+  }
+  .icon-btn:hover { transform: scale(1.08); }
+  .icon-btn:active { transform: scale(0.94); }
+  .icon-btn:focus-visible { outline: 3px solid var(--accent-blue); outline-offset: 2px; }
+
+  .board-wrap { position: relative; width: 100%; max-width: 620px; }
+
+  .board {
+    container-type: inline-size;
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(var(--cols, 6), 1fr);
+    gap: clamp(5px, 1.6vw, 10px);
+  }
+
+  .card {
+    aspect-ratio: 1 / 1;
+    perspective: 800px;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .card:disabled { cursor: default; }
+  .card:focus-visible .card-inner { outline: 3px solid var(--accent-blue); outline-offset: 2px; }
+
+  .card-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    border-radius: 22%;
+    transition: transform 0.45s cubic-bezier(0.4, 0.2, 0.2, 1);
+    transform-style: preserve-3d;
+    box-shadow: 0 3px 0 var(--shadow);
+  }
+
+  .card.flipped .card-inner,
+  .card.matched .card-inner { transform: rotateY(180deg); }
+
+  .card-face {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 22%;
+    backface-visibility: hidden;
+  }
+
+  .card-back {
+    background: linear-gradient(155deg, var(--card-back-1), var(--card-back-2));
+    font-size: calc(38cqw / var(--cols, 6));
+  }
+  .card:nth-child(odd) .card-back { background: linear-gradient(155deg, var(--card-back-2), var(--card-back-1)); }
+
+  .card-front {
+    background: var(--card-face);
+    transform: rotateY(180deg);
+    font-size: calc(50cqw / var(--cols, 6));
+    box-shadow: inset 0 0 0 2px var(--ring);
+  }
+
+  .card.matched .card-front {
+    animation: pop 0.5s ease;
+    box-shadow: inset 0 0 0 3px var(--accent-mint), 0 0 16px 2px color-mix(in srgb, var(--accent-mint) 45%, transparent);
+  }
+
+  @keyframes pop {
+    0% { transform: rotateY(180deg) scale(1); }
+    45% { transform: rotateY(180deg) scale(1.14); }
+    100% { transform: rotateY(180deg) scale(1); }
+  }
+
+  .card.wobble .card-inner { animation: wobble 0.5s ease; }
+  @keyframes wobble {
+    0%, 100% { transform: rotateY(0deg) translateX(0); }
+    25% { transform: rotateY(0deg) translateX(-4%); }
+    75% { transform: rotateY(0deg) translateX(4%); }
+  }
+
+  .toast {
+    min-height: 1.6em;
+    font-family: 'Baloo 2', sans-serif;
+    font-weight: 700;
+    font-size: clamp(1rem, 3.6vw, 1.2rem);
+    color: var(--accent-pink);
+    text-align: center;
+  }
+
+  .primary-btn {
+    font-family: 'Baloo 2', sans-serif;
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: #2b2250;
+    background: var(--accent-yellow);
+    border: none;
+    border-radius: 999px;
+    padding: 12px 28px;
+    box-shadow: 0 5px 0 #e0a020;
+    cursor: pointer;
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+  }
+  .primary-btn:hover { transform: translateY(-1px); }
+  .primary-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 #e0a020; }
+  .primary-btn:focus-visible { outline: 3px solid var(--accent-blue); outline-offset: 3px; }
+
+  .preview-banner {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: color-mix(in srgb, var(--surface) 88%, transparent);
+    border-radius: 18px;
+    font-family: 'Baloo 2', sans-serif;
+    font-weight: 800;
+    font-size: clamp(1.1rem, 4.5vw, 1.6rem);
+    color: var(--ink);
+    text-align: center;
+    padding: 12px;
+    z-index: 2;
+  }
+
+  .win-overlay {
+    position: fixed;
+    inset: 0;
+    background: color-mix(in srgb, var(--ink) 55%, transparent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    z-index: 10;
+  }
+
+  .win-card {
+    background: var(--surface);
+    border-radius: 24px;
+    padding: 28px 24px;
+    max-width: 360px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.35);
+  }
+
+  .win-card h2 {
+    font-family: 'Baloo 2', sans-serif;
+    font-size: 1.8rem;
+    margin: 0 0 6px;
+    color: var(--ink);
+  }
+
+  .win-card p {
+    color: var(--ink-soft);
+    font-weight: 700;
+    margin: 0 0 6px;
+  }
+
+  .stars { font-size: 1.8rem; margin: 10px 0 16px; letter-spacing: 4px; }
+
+  #confetti {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 20;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .card-inner, .primary-btn, .icon-btn { transition: none !important; }
+    .card.matched .card-front, .card.wobble .card-inner { animation: none !important; }
+  }
+</style>
+
+<div class="page">
+  <header class="topbar">
+    <h1>🦄 Critter Match</h1>
+    <p class="subtitle">Flip two cards and find the matching critters!</p>
+  </header>
+
+  <div class="difficulty-row" role="group" aria-label="Choose difficulty">
+    <button class="diff-btn" id="diffEasy" data-level="easy" type="button">Easy</button>
+    <button class="diff-btn" id="diffMedium" data-level="medium" type="button">Medium</button>
+    <button class="diff-btn" id="diffHard" data-level="hard" type="button">Hard</button>
+  </div>
+
+  <div class="stats">
+    <div class="stat">
+      <span class="stat-label">Matches</span>
+      <span class="stat-value" id="matchCount">0 / 8</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Tries</span>
+      <span class="stat-value" id="moveCount">0</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Time</span>
+      <span class="stat-value" id="timer">0:00</span>
+    </div>
+    <button class="icon-btn" id="soundToggle" aria-label="Turn sound off" aria-pressed="true">🔊</button>
+  </div>
+
+  <div class="board-wrap">
+    <div class="board" id="board" role="grid" aria-label="Memory game board"></div>
+    <div class="preview-banner" id="previewBanner" hidden></div>
+  </div>
+
+  <p class="toast" id="toast" aria-live="polite"></p>
+
+  <button class="primary-btn" id="newGameBtn">🔀 New Game</button>
+</div>
+
+<div class="win-overlay" id="winOverlay" hidden role="dialog" aria-modal="true" aria-labelledby="winTitle">
+  <div class="win-card">
+    <h2 id="winTitle">🎉 You found them all!</h2>
+    <p id="winStats"></p>
+    <div class="stars" id="winStars"></div>
+    <button class="primary-btn" id="playAgainBtn">Play Again</button>
+  </div>
+</div>
+
+<canvas id="confetti"></canvas>
+
+<script>
+(function () {
+  var SYMBOLS = ['🦄','🐸','🐙','🦋','🐳','🦁','🐼','🦊','🐨','🐰','🦉','🐢','🐬','🦖','🐝','🐧','🐌','🦀'];
+  var MATCH_PHRASES = ['Great job!', 'Woohoo!', 'You found it!', 'Super match!', 'Nice eyes!', 'Amazing!', 'Way to go!'];
+  var MISS_PHRASES = ['So close!', 'Try again!', 'Keep looking!', 'Almost had it!'];
+  var DIFFICULTIES = {
+    easy: { label: 'Easy', cols: 4, rows: 4, pairs: 8 },
+    medium: { label: 'Medium', cols: 6, rows: 4, pairs: 12 },
+    hard: { label: 'Hard', cols: 6, rows: 6, pairs: 18 }
+  };
+  var difficulty = 'easy';
+  try {
+    var storedDiff = localStorage.getItem('critterMatchDifficulty');
+    if (storedDiff && DIFFICULTIES[storedDiff]) difficulty = storedDiff;
+  } catch (e) {}
+
+  var boardEl = document.getElementById('board');
+  var diffButtons = document.querySelectorAll('.diff-btn');
+  var matchCountEl = document.getElementById('matchCount');
+  var moveCountEl = document.getElementById('moveCount');
+  var timerEl = document.getElementById('timer');
+  var toastEl = document.getElementById('toast');
+  var soundToggle = document.getElementById('soundToggle');
+  var newGameBtn = document.getElementById('newGameBtn');
+  var previewBanner = document.getElementById('previewBanner');
+  var winOverlay = document.getElementById('winOverlay');
+  var winStats = document.getElementById('winStats');
+  var winStars = document.getElementById('winStars');
+  var playAgainBtn = document.getElementById('playAgainBtn');
+
+  var cards = [];
+  var flippedIndexes = [];
+  var matches = 0;
+  var moves = 0;
+  var locked = false;
+  var previewing = false;
+  var finished = false;
+  var elapsedBase = 0;
+  var runStart = null;
+  var timerHandle = null;
+  var toastHandle = null;
+  var soundOn = true;
+
+  try {
+    var storedSound = localStorage.getItem('critterMatchSound');
+    if (storedSound === 'off') soundOn = false;
+  } catch (e) {}
+
+  function updateSoundButton() {
+    soundToggle.textContent = soundOn ? '🔊' : '🔇';
+    soundToggle.setAttribute('aria-pressed', String(soundOn));
+    soundToggle.setAttribute('aria-label', soundOn ? 'Turn sound off' : 'Turn sound on');
+  }
+  updateSoundButton();
+
+  soundToggle.addEventListener('click', function () {
+    soundOn = !soundOn;
+    updateSoundButton();
+    try { localStorage.setItem('critterMatchSound', soundOn ? 'on' : 'off'); } catch (e) {}
+    if (soundOn) beep(520, 0.08, 'sine', 0.15);
+  });
+
+  // ---- sound ----
+  var audioCtx = null;
+  function ctx() {
+    if (!audioCtx) {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) audioCtx = new AC();
+    }
+    return audioCtx;
+  }
+  function beep(freq, dur, type, gain, delay) {
+    if (!soundOn) return;
+    var c = ctx();
+    if (!c) return;
+    var t0 = c.currentTime + (delay || 0);
+    var osc = c.createOscillator();
+    var g = c.createGain();
+    osc.type = type || 'sine';
+    osc.frequency.setValueAtTime(freq, t0);
+    g.gain.setValueAtTime(0, t0);
+    g.gain.linearRampToValueAtTime(gain || 0.2, t0 + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+    osc.connect(g).connect(c.destination);
+    osc.start(t0);
+    osc.stop(t0 + dur + 0.02);
+  }
+  function playFlip() { beep(480, 0.09, 'triangle', 0.14); }
+  function playMatch() { beep(660, 0.12, 'sine', 0.18); beep(880, 0.16, 'sine', 0.18, 0.1); }
+  function playMiss() { beep(220, 0.18, 'sine', 0.14); }
+  function playWin() {
+    [523, 659, 784, 1047].forEach(function (f, i) { beep(f, 0.22, 'sine', 0.18, i * 0.12); });
+  }
+
+  // ---- helpers ----
+  function shuffle(arr) {
+    for (var i = arr.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+    }
+    return arr;
+  }
+
+  function buildDeck(pairs) {
+    var deck = [];
+    SYMBOLS.slice(0, pairs).forEach(function (sym) { deck.push(sym); deck.push(sym); });
+    return shuffle(deck);
+  }
+
+  function formatTime(totalSeconds) {
+    var s = Math.max(0, Math.round(totalSeconds));
+    var m = Math.floor(s / 60);
+    var r = s % 60;
+    return m + ':' + (r < 10 ? '0' : '') + r;
+  }
+
+  function currentElapsed() {
+    return elapsedBase + (runStart ? (Date.now() - runStart) / 1000 : 0);
+  }
+
+  function tickTimer() {
+    timerEl.textContent = formatTime(currentElapsed());
+  }
+
+  function startTimer() {
+    if (runStart || finished) return;
+    runStart = Date.now();
+    if (!timerHandle) timerHandle = setInterval(tickTimer, 1000);
+  }
+
+  function stopTimer() {
+    if (runStart) {
+      elapsedBase += (Date.now() - runStart) / 1000;
+      runStart = null;
+    }
+  }
+
+  function showToast(text) {
+    toastEl.textContent = text;
+    if (toastHandle) clearTimeout(toastHandle);
+    toastHandle = setTimeout(function () { toastEl.textContent = ''; }, 1500);
+  }
+
+  // ---- rendering ----
+  function render() {
+    boardEl.innerHTML = '';
+    cards.forEach(function (card, index) {
+      var btn = document.createElement('button');
+      btn.className = 'card' + (card.matched ? ' matched' : '') + (card.flipped ? ' flipped' : '');
+      btn.type = 'button';
+      btn.setAttribute('role', 'gridcell');
+      btn.dataset.index = String(index);
+      btn.disabled = card.matched || previewing;
+      btn.setAttribute('aria-label', card.matched || card.flipped ? 'Card showing ' + card.name : 'Hidden card ' + (index + 1));
+
+      var inner = document.createElement('div');
+      inner.className = 'card-inner';
+
+      var back = document.createElement('div');
+      back.className = 'card-face card-back';
+      back.textContent = '🐾';
+      back.setAttribute('aria-hidden', 'true');
+
+      var front = document.createElement('div');
+      front.className = 'card-face card-front';
+      front.textContent = card.symbol;
+      front.setAttribute('aria-hidden', 'true');
+
+      inner.appendChild(back);
+      inner.appendChild(front);
+      btn.appendChild(inner);
+      btn.addEventListener('click', function () { onCardClick(index); });
+      boardEl.appendChild(btn);
+    });
+    matchCountEl.textContent = matches + ' / ' + DIFFICULTIES[difficulty].pairs;
+    moveCountEl.textContent = String(moves);
+    tickTimer();
+  }
+
+  function applyDifficultyUI() {
+    var config = DIFFICULTIES[difficulty];
+    boardEl.style.setProperty('--cols', config.cols);
+    boardEl.setAttribute('aria-label', 'Memory game board, ' + config.cols + ' by ' + config.rows + ' cards');
+    diffButtons.forEach(function (btn) {
+      var isActive = btn.dataset.level === difficulty;
+      btn.classList.toggle('active', isActive);
+      btn.setAttribute('aria-pressed', String(isActive));
+    });
+  }
+
+  diffButtons.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var level = btn.dataset.level;
+      if (level === difficulty) return;
+      difficulty = level;
+      try { localStorage.setItem('critterMatchDifficulty', difficulty); } catch (e) {}
+      applyDifficultyUI();
+      newGame(false);
+    });
+  });
+
+  var symbolNames = {
+    '🦄':'unicorn','🐸':'frog','🐙':'octopus','🦋':'butterfly','🐳':'whale','🦁':'lion',
+    '🐼':'panda','🦊':'fox','🐨':'koala','🐰':'rabbit','🦉':'owl','🐢':'turtle',
+    '🐬':'dolphin','🦖':'dinosaur','🐝':'bee','🐧':'penguin','🐌':'snail','🦀':'crab'
+  };
+
+  function onCardClick(index) {
+    if (locked || previewing || finished) return;
+    var card = cards[index];
+    if (card.flipped || card.matched) return;
+
+    startTimer();
+    card.flipped = true;
+    flippedIndexes.push(index);
+    playFlip();
+    updateCardEl(index);
+
+    if (flippedIndexes.length === 2) {
+      moves++;
+      moveCountEl.textContent = String(moves);
+      locked = true;
+      var a = cards[flippedIndexes[0]];
+      var b = cards[flippedIndexes[1]];
+      if (a.symbol === b.symbol) {
+        setTimeout(function () {
+          a.matched = true; b.matched = true;
+          matches++;
+          matchCountEl.textContent = matches + ' / ' + DIFFICULTIES[difficulty].pairs;
+          showToast(MATCH_PHRASES[Math.floor(Math.random() * MATCH_PHRASES.length)] + ' 🎉');
+          playMatch();
+          updateCardEl(flippedIndexes[0]);
+          updateCardEl(flippedIndexes[1]);
+          flippedIndexes = [];
+          locked = false;
+          if (matches === DIFFICULTIES[difficulty].pairs) onWin();
+        }, 420);
+      } else {
+        setTimeout(function () {
+          showToast(MISS_PHRASES[Math.floor(Math.random() * MISS_PHRASES.length)]);
+          playMiss();
+          wobble(flippedIndexes[0]);
+          wobble(flippedIndexes[1]);
+        }, 500);
+        setTimeout(function () {
+          a.flipped = false; b.flipped = false;
+          updateCardEl(flippedIndexes[0]);
+          updateCardEl(flippedIndexes[1]);
+          flippedIndexes = [];
+          locked = false;
+        }, 900);
+      }
+    }
+  }
+
+  function wobble(index) {
+    var el = boardEl.children[index];
+    if (!el) return;
+    el.classList.add('wobble');
+    setTimeout(function () { el.classList.remove('wobble'); }, 550);
+  }
+
+  function updateCardEl(index) {
+    var el = boardEl.children[index];
+    var card = cards[index];
+    if (!el) return;
+    el.className = 'card' + (card.matched ? ' matched' : '') + (card.flipped ? ' flipped' : '');
+    el.disabled = card.matched || previewing;
+    el.setAttribute('aria-label', card.matched || card.flipped ? 'Card showing ' + card.name : 'Hidden card ' + (index + 1));
+  }
+
+  function starsForMoves(pairs, moveCount) {
+    if (moveCount <= Math.ceil(pairs * 1.25)) return 3;
+    if (moveCount <= Math.ceil(pairs * 1.7)) return 2;
+    return 1;
+  }
+
+  function onWin() {
+    finished = true;
+    stopTimer();
+    playWin();
+    var pairs = DIFFICULTIES[difficulty].pairs;
+    var stars = starsForMoves(pairs, moves);
+    winStats.textContent = 'You matched all ' + pairs + ' pairs in ' + moves + ' tries and ' + formatTime(currentElapsed()) + '!';
+    winStars.textContent = '⭐'.repeat(stars) + '☆'.repeat(3 - stars);
+    winOverlay.hidden = false;
+    launchConfetti();
+  }
+
+  // ---- preview / new game ----
+  function newGame(skipPreview) {
+    stopTimer();
+    clearInterval(timerHandle);
+    timerHandle = null;
+    elapsedBase = 0;
+    runStart = null;
+    moves = 0;
+    matches = 0;
+    flippedIndexes = [];
+    locked = false;
+    finished = false;
+    winOverlay.hidden = true;
+    toastEl.textContent = '';
+    applyDifficultyUI();
+
+    var deck = buildDeck(DIFFICULTIES[difficulty].pairs);
+    cards = deck.map(function (symbol) {
+      return { symbol: symbol, name: symbolNames[symbol] || 'critter', flipped: true, matched: false };
+    });
+
+    render();
+
+    if (skipPreview) {
+      cards.forEach(function (c) { c.flipped = false; });
+      render();
+      return;
+    }
+
+    previewing = true;
+    previewBanner.hidden = false;
+    previewBanner.textContent = 'Get ready! 👀 Memorize the critters...';
+    var count = 3;
+    var countdown = setInterval(function () {
+      count--;
+      if (count > 0) {
+        previewBanner.textContent = 'Cards flip down in ' + count + '...';
+      } else {
+        clearInterval(countdown);
+        previewing = false;
+        previewBanner.hidden = true;
+        cards.forEach(function (c) { c.flipped = false; });
+        render();
+      }
+    }, 800);
+  }
+
+  newGameBtn.addEventListener('click', function () { newGame(false); });
+  playAgainBtn.addEventListener('click', function () { newGame(false); });
+
+  // ---- confetti ----
+  var confettiCanvas = document.getElementById('confetti');
+  var cctx = confettiCanvas.getContext('2d');
+  var confettiPieces = [];
+  var confettiRunning = false;
+  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var confettiColors = ['#ff6b9d', '#ffd166', '#06d6a0', '#4ea8de', '#ff8a65'];
+
+  function resizeConfetti() {
+    confettiCanvas.width = window.innerWidth;
+    confettiCanvas.height = window.innerHeight;
+  }
+  window.addEventListener('resize', resizeConfetti);
+  resizeConfetti();
+
+  function launchConfetti() {
+    if (reduceMotion) return;
+    confettiPieces = [];
+    for (var i = 0; i < 140; i++) {
+      confettiPieces.push({
+        x: Math.random() * confettiCanvas.width,
+        y: -20 - Math.random() * confettiCanvas.height * 0.4,
+        w: 6 + Math.random() * 6,
+        h: 8 + Math.random() * 8,
+        color: confettiColors[Math.floor(Math.random() * confettiColors.length)],
+        vy: 2 + Math.random() * 3,
+        vx: -1.5 + Math.random() * 3,
+        rot: Math.random() * Math.PI,
+        vr: -0.2 + Math.random() * 0.4
+      });
+    }
+    if (!confettiRunning) {
+      confettiRunning = true;
+      requestAnimationFrame(stepConfetti);
+    }
+    setTimeout(function () { confettiRunning = false; }, 3200);
+  }
+
+  function stepConfetti() {
+    cctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+    var alive = false;
+    confettiPieces.forEach(function (p) {
+      p.x += p.vx; p.y += p.vy; p.rot += p.vr;
+      if (p.y < confettiCanvas.height + 20) alive = true;
+      cctx.save();
+      cctx.translate(p.x, p.y);
+      cctx.rotate(p.rot);
+      cctx.fillStyle = p.color;
+      cctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      cctx.restore();
+    });
+    if (confettiRunning || alive) {
+      requestAnimationFrame(stepConfetti);
+    } else {
+      cctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+    }
+  }
+
+  // ---- hot state (keeps in-progress game when the page updates) ----
+  function getState() {
+    return {
+      difficulty: difficulty,
+      cards: cards.map(function (c) { return { symbol: c.symbol, flipped: c.flipped, matched: c.matched }; }),
+      moves: moves,
+      matches: matches,
+      elapsed: currentElapsed(),
+      finished: finished
+    };
+  }
+
+  function boot(data) {
+    var savedDifficulty = data && DIFFICULTIES[data.difficulty] ? data.difficulty : difficulty;
+    var expectedCount = DIFFICULTIES[savedDifficulty].pairs * 2;
+    if (data && Array.isArray(data.cards) && data.cards.length === expectedCount) {
+      difficulty = savedDifficulty;
+      cards = data.cards.map(function (c) {
+        return { symbol: c.symbol, name: symbolNames[c.symbol] || 'critter', flipped: !!c.matched, matched: !!c.matched };
+      });
+      moves = data.moves || 0;
+      matches = data.matches || 0;
+      elapsedBase = data.elapsed || 0;
+      finished = !!data.finished;
+      previewing = false;
+      applyDifficultyUI();
+      render();
+      if (finished) {
+        var pairs = DIFFICULTIES[difficulty].pairs;
+        var stars = starsForMoves(pairs, moves);
+        winStats.textContent = 'You matched all ' + pairs + ' pairs in ' + moves + ' tries and ' + formatTime(elapsedBase) + '!';
+        winStars.textContent = '⭐'.repeat(stars) + '☆'.repeat(3 - stars);
+        winOverlay.hidden = false;
+      }
+    } else {
+      newGame(false);
+    }
+  }
+
+  try {
+    if (window.claude && window.claude.hot) {
+      window.claude.hot.snapshot(getState);
+      if (window.claude.hot.ready) {
+        window.claude.hot.ready(boot);
+      } else {
+        boot(window.claude.hot.data);
+      }
+    } else {
+      boot(null);
+    }
+  } catch (e) {
+    boot(null);
+  }
+})();
+</script>
