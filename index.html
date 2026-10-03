@@ -92,7 +92,16 @@
     box-shadow: 0 6px 18px var(--shadow);
   }
 
-  .diff-btn {
+  .mode-row {
+    display: flex;
+    gap: 8px;
+    background: var(--surface);
+    padding: 6px;
+    border-radius: 999px;
+    box-shadow: 0 6px 18px var(--shadow);
+  }
+
+  .diff-btn, .mode-btn {
     font-family: 'Baloo 2', sans-serif;
     font-weight: 700;
     font-size: 0.95rem;
@@ -104,12 +113,53 @@
     cursor: pointer;
     transition: background 0.15s ease, color 0.15s ease, transform 0.1s ease;
   }
-  .diff-btn:hover { transform: translateY(-1px); }
-  .diff-btn:focus-visible { outline: 3px solid var(--accent-blue); outline-offset: 2px; }
-  .diff-btn.active {
+  .diff-btn:hover, .mode-btn:hover { transform: translateY(-1px); }
+  .diff-btn:focus-visible, .mode-btn:focus-visible { outline: 3px solid var(--accent-blue); outline-offset: 2px; }
+  .diff-btn.active, .mode-btn.active {
     background: var(--accent-mint);
     color: #16412f;
   }
+
+  .players-row {
+    width: 100%;
+    max-width: 620px;
+    display: flex;
+    gap: 10px;
+  }
+
+  .player-chip {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    background: var(--surface);
+    border-radius: 16px;
+    padding: 10px 12px;
+    box-shadow: 0 6px 18px var(--shadow);
+    transition: background 0.2s ease, transform 0.2s ease;
+  }
+  .player-chip.active {
+    background: var(--accent-mint);
+    transform: translateY(-2px);
+  }
+  .player-name {
+    font-family: 'Baloo 2', sans-serif;
+    font-weight: 800;
+    font-size: 0.85rem;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .player-chip.active .player-name { color: #16412f; }
+  .player-score {
+    font-family: 'Baloo 2', sans-serif;
+    font-weight: 700;
+    font-size: 1.5rem;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+  .player-chip.active .player-score { color: #16412f; }
 
   .stats {
     width: 100%;
@@ -341,10 +391,26 @@
     <p class="subtitle">Flip two cards and find the matching critters!</p>
   </header>
 
+  <div class="mode-row" role="group" aria-label="Choose number of players">
+    <button class="mode-btn" id="mode1p" data-mode="1" type="button">1 Player</button>
+    <button class="mode-btn" id="mode2p" data-mode="2" type="button">2 Players</button>
+  </div>
+
   <div class="difficulty-row" role="group" aria-label="Choose difficulty">
     <button class="diff-btn" id="diffEasy" data-level="easy" type="button">Easy</button>
     <button class="diff-btn" id="diffMedium" data-level="medium" type="button">Medium</button>
     <button class="diff-btn" id="diffHard" data-level="hard" type="button">Hard</button>
+  </div>
+
+  <div class="players-row" id="playersRow" hidden>
+    <div class="player-chip" id="playerChip1" data-player="1">
+      <span class="player-name" id="player1Name">Player 1</span>
+      <span class="player-score" id="player1Score">0</span>
+    </div>
+    <div class="player-chip" id="playerChip2" data-player="2">
+      <span class="player-name" id="player2Name">Player 2</span>
+      <span class="player-score" id="player2Score">0</span>
+    </div>
   </div>
 
   <div class="stats">
@@ -400,8 +466,15 @@
     if (storedDiff && DIFFICULTIES[storedDiff]) difficulty = storedDiff;
   } catch (e) {}
 
+  var playerMode = 1;
+  try {
+    var storedPlayers = localStorage.getItem('critterMatchPlayers');
+    if (storedPlayers === '2') playerMode = 2;
+  } catch (e) {}
+
   var boardEl = document.getElementById('board');
   var diffButtons = document.querySelectorAll('.diff-btn');
+  var modeButtons = document.querySelectorAll('.mode-btn');
   var matchCountEl = document.getElementById('matchCount');
   var moveCountEl = document.getElementById('moveCount');
   var timerEl = document.getElementById('timer');
@@ -410,9 +483,14 @@
   var newGameBtn = document.getElementById('newGameBtn');
   var previewBanner = document.getElementById('previewBanner');
   var winOverlay = document.getElementById('winOverlay');
+  var winTitle = document.getElementById('winTitle');
   var winStats = document.getElementById('winStats');
   var winStars = document.getElementById('winStars');
   var playAgainBtn = document.getElementById('playAgainBtn');
+  var playersRow = document.getElementById('playersRow');
+  var playerChips = { 1: document.getElementById('playerChip1'), 2: document.getElementById('playerChip2') };
+  var playerNameEls = { 1: document.getElementById('player1Name'), 2: document.getElementById('player2Name') };
+  var playerScoreEls = { 1: document.getElementById('player1Score'), 2: document.getElementById('player2Score') };
 
   var cards = [];
   var flippedIndexes = [];
@@ -426,6 +504,8 @@
   var timerHandle = null;
   var toastHandle = null;
   var soundOn = true;
+  var currentPlayer = 1;
+  var scores = { 1: 0, 2: 0 };
 
   try {
     var storedSound = localStorage.getItem('critterMatchSound');
@@ -585,6 +665,34 @@
     });
   });
 
+  function applyModeUI() {
+    modeButtons.forEach(function (btn) {
+      var isActive = Number(btn.dataset.mode) === playerMode;
+      btn.classList.toggle('active', isActive);
+      btn.setAttribute('aria-pressed', String(isActive));
+    });
+    playersRow.hidden = playerMode !== 2;
+    if (playerMode === 2) {
+      [1, 2].forEach(function (p) {
+        var isTurn = p === currentPlayer;
+        playerChips[p].classList.toggle('active', isTurn);
+        playerNameEls[p].textContent = (isTurn ? '👉 ' : '') + 'Player ' + p;
+        playerScoreEls[p].textContent = String(scores[p]);
+      });
+    }
+  }
+
+  modeButtons.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var mode = Number(btn.dataset.mode);
+      if (mode === playerMode) return;
+      playerMode = mode;
+      try { localStorage.setItem('critterMatchPlayers', String(playerMode)); } catch (e) {}
+      applyModeUI();
+      newGame(false);
+    });
+  });
+
   var symbolNames = {
     '🦄':'unicorn','🐸':'frog','🐙':'octopus','🦋':'butterfly','🐳':'whale','🦁':'lion',
     '🐼':'panda','🦊':'fox','🐨':'koala','🐰':'rabbit','🦉':'owl','🐢':'turtle',
@@ -613,6 +721,10 @@
           a.matched = true; b.matched = true;
           matches++;
           matchCountEl.textContent = matches + ' / ' + DIFFICULTIES[difficulty].pairs;
+          if (playerMode === 2) {
+            scores[currentPlayer]++;
+            applyModeUI();
+          }
           showToast(MATCH_PHRASES[Math.floor(Math.random() * MATCH_PHRASES.length)] + ' 🎉');
           playMatch();
           updateCardEl(flippedIndexes[0]);
@@ -634,6 +746,11 @@
           updateCardEl(flippedIndexes[1]);
           flippedIndexes = [];
           locked = false;
+          if (playerMode === 2) {
+            currentPlayer = currentPlayer === 1 ? 2 : 1;
+            applyModeUI();
+            showToast('Player ' + currentPlayer + "'s turn!");
+          }
         }, 900);
       }
     }
@@ -666,9 +783,24 @@
     stopTimer();
     playWin();
     var pairs = DIFFICULTIES[difficulty].pairs;
-    var stars = starsForMoves(pairs, moves);
-    winStats.textContent = 'You matched all ' + pairs + ' pairs in ' + moves + ' tries and ' + formatTime(currentElapsed()) + '!';
-    winStars.textContent = '⭐'.repeat(stars) + '☆'.repeat(3 - stars);
+    if (playerMode === 2) {
+      var p1 = scores[1], p2 = scores[2];
+      if (p1 === p2) {
+        winTitle.textContent = "🤝 It's a Tie!";
+        winStats.textContent = 'Both players found ' + p1 + ' pairs in ' + formatTime(currentElapsed()) + '!';
+      } else {
+        var winner = p1 > p2 ? 1 : 2;
+        winTitle.textContent = '🏆 Player ' + winner + ' Wins!';
+        winStats.textContent = 'Player 1: ' + p1 + ' · Player 2: ' + p2 + ' · ' + formatTime(currentElapsed());
+      }
+      winStars.hidden = true;
+    } else {
+      winTitle.textContent = '🎉 You found them all!';
+      var stars = starsForMoves(pairs, moves);
+      winStats.textContent = 'You matched all ' + pairs + ' pairs in ' + moves + ' tries and ' + formatTime(currentElapsed()) + '!';
+      winStars.hidden = false;
+      winStars.textContent = '⭐'.repeat(stars) + '☆'.repeat(3 - stars);
+    }
     winOverlay.hidden = false;
     launchConfetti();
   }
@@ -687,7 +819,10 @@
     finished = false;
     winOverlay.hidden = true;
     toastEl.textContent = '';
+    currentPlayer = 1;
+    scores = { 1: 0, 2: 0 };
     applyDifficultyUI();
+    applyModeUI();
 
     var deck = buildDeck(DIFFICULTIES[difficulty].pairs);
     cards = deck.map(function (symbol) {
